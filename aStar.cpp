@@ -1,6 +1,10 @@
 #include <iostream>
 #include <fstream>
 #include <regex>
+#include <map>
+#include <climits>
+#include <iomanip>
+
 #define N 2
 #define X 10
 #define TotalNos INT16_MAX
@@ -14,8 +18,16 @@ struct no{
     bool pitstop;
 };
 
-double h(no *s, no *t, double g, double tempoBase){
-    double valorIdeal = g;
+
+/**
+ * Realiza o cálculo da heuristica definida.
+ * @param s     [IN]  Nó de onde se deseja calcular a heuristica.
+ * @param t     [IN]  Nó destino.
+ * @param tempoBase    [IN]  O tempo base para cada volta.
+ * @retval double  Valor da heuristica.
+ */
+double h(no *s, no *t, double tempoBase){
+    double valorIdeal = 0;
     no *h;
     h = s;
     while(h != t){
@@ -30,18 +42,32 @@ double h(no *s, no *t, double g, double tempoBase){
     return valorIdeal;
 }
 
-no *melhorVertice(no *v[], int n, double f[]){
+/**
+ * Encontra a melhor vértice presente no vetor passado.
+ * @param v     [IN]  Vetor de onde se deseja encontrar a melhor vértice.
+ * @param n     [IN]  Tamanho do vetor v.
+ * @param f    [IN]  Map contendo todos os nós e seus respectivos custos estimados.
+ * @retval no*  A melhor vértice encontrado no vetor passado.
+ */
+no *melhorVertice(no *v[], int n, map<no*, double> f){
     double menorValor = INT16_MAX;
     no *menorNo = nullptr;
     for(int i = 0; i < n; i++){
-        if (f[i] < menorValor){
-           menorValor = f[i];
+        if (f.at(v[i]) < menorValor){
+           menorValor = f.at(v[i]);
            menorNo = v[i]; 
         }
     }
     return menorNo;
 }
 
+/**
+ * Verifica se um valor está presente no vetor passado.
+ * @param v     [IN]  Vetor de onde se deseja procurar.
+ * @param n     [IN]  Tamanho do vetor v.
+ * @param s    [IN]  Item que se dejesa procurar no vetor v.
+ * @retval bool  Se o valor está contido ou não no vetor.
+ */
 template <typename T>
 bool isIn(T v[], int n, T s){
     for (int i = 0; i < n; i++){
@@ -52,57 +78,68 @@ bool isIn(T v[], int n, T s){
     return false;
 }
 
+/**
+ * Remove o valor desejado do vetor passado.
+ * @param v     [IN]  Vetor de onde se deseja remover o valor.
+ * @param n     [IN]  Tamanho do vetor v.
+ * @param valor    [IN]  Valor que se deseja remover do vetor v.
+ */
 template <typename T>
-void remove(T *vetor, int n, T valor){
+void remove(T *v, int n, T valor){
     int i = 0;
-    while (vetor[i] != valor){
+    while (v[i] != valor){
         i++;
     }
     for(i; i < n - 1; i++){
-        vetor[i] = vetor[i + 1];
+        v[i] = vetor[i + 1];
     }
-    vetor[i] = 0;
+    v[i] = 0;
 }
 
-no *aStar(no *s, no *t, double tempoBase, bool achou){
-    double f[TotalNos], g[TotalNos];
-    no *pai[TotalNos], *abertos[TotalNos], *fechados[TotalNos];
-    int novoF, abertosNum = 0, fechadosNum = 0;
+/**
+ * Calcula o caminho de menor custo do ponto inicial até o ponto final.
+ * @param s     [IN]  Nó inicial.
+ * @param t     [IN]  Nó final.
+ * @param tempoBase    [IN]  Tempo base para cada volta.
+ * @retval no*  O vetor contendo o melhor caminho.
+ * @retval nullptr  Não encontrou um caminho
+ */
+no *aStar(no *s, no *t, double tempoBase){
+    double g[TotalNos], novoF;
+    no *abertos[TotalNos], *fechados[TotalNos];
+    map<no*, no*> pai;
+    map<no*, double> f;
+    int abertosNum = 0, fechadosNum = 0;
+    bool achou = false;
 
     g[s->volta] = 0;
-    f[s->volta] = g[s->volta] + h(s, t, g[s->volta], tempoBase);
-    pai[s->volta] = nullptr;
+    f.insert({s, g[s->volta] + h(s, t, tempoBase)});
     abertos[abertosNum] = s;
     abertosNum++;
-    achou = false;
-    cout << "caralha iniciou" << endl;
-
-    int x = 0;
 
     while (abertosNum != 0 && !achou)
     {   
         no *v;
         v = melhorVertice(abertos, abertosNum, f);
-        cout << t->volta << endl;
         if (v->volta == t->volta){
             achou = true;
-            continue;
         }
         no *u;
         for (int i = 0; i < N; i++){
             if(v->links[i] != nullptr){
                 u = v->links[i];
-                novoF = v->custos[i] + h(u, t, g[v->volta], tempoBase);
-                for (int z = 0; z < abertosNum; z++){
-                }
-                cout << endl;
-                if (((isIn(fechados, fechadosNum, u) || isIn(abertos, abertosNum, u)) && (novoF >= f[u->volta]))){
-                    continue;
-                }
-                else {
-                    pai[u->volta] = v;
+                novoF = v->custos[i] + h(u, t, tempoBase);
+                if (!((isIn(fechados, fechadosNum, u) || isIn(abertos, abertosNum, u)) && (f.find(u) != f.end() ? (novoF >= f.at(u)) : false))){
+                    pai.insert({u, v});
+                    
                     g[u->volta] = g[v->volta] + v->custos[i];
-                    f[u->volta] = novoF;
+                    if(f.find(u) != f.end()){
+                        f.at(u) = novoF;
+                    }
+                    else {
+                        f.insert({u, novoF});
+                    }
+                    
                     if (isIn(fechados, fechadosNum, u)){
                         remove(fechados, fechadosNum, u);
                         fechadosNum--;
@@ -121,38 +158,38 @@ no *aStar(no *s, no *t, double tempoBase, bool achou){
         fechadosNum++;
         remove(abertos, abertosNum, v);
         abertosNum--;
-        x++;
     }
 
+
     if (achou){
-        int i = 0;
-        no *a;
-        a = t;
-        while (t != s){
-            t = pai[t->volta];
-            i++;
-            
+        no *caminho, *c;
+        caminho = new no[t->volta]; 
+        c = t;
+        int k = 0;
+        while (c != s){
+            caminho[k] = *c;
+            c = pai.at(c);
+            k++;
         }
-        cout << "biava" << endl;
-        cout << "pais :";
-        for (int p = 0; p < i; p++){
-            cout << pai[p] << endl;
-        }
-        no *v[i];
-        a = t;
-        for (int j = 0; j < i; j++){
-            cout << "biavas" << j << endl;
-            v[j] = t;
-            t = pai[t->volta];
-        }
-        return *v;
+        caminho[k] = *c;
+        return caminho;
     }
     else {
-        
         return nullptr;
     }
 }
 
+/**
+ * Constroi a arvore binária contendo as voltas e os custos.
+ * @param voltasSemPit     [IN]  Número de voltas que não ocorrem um pitstop.
+ * @param voltaAtual     [IN]  Número da volta atual.
+ * @param minVoltasPit    [IN]  O mínimo de voltas antes de um pistop poder ocorrer.
+ * @param maxVoltasPit    [IN]  O máximo de voltas até de um pistop poder ocorrer.
+ * @param variancaTempos    [IN]  Um vetor contendo a perda de tempo por volta cada volta que está sem ocorrer um pitstop.
+ * @param custoPit    [IN]  Custo de tempo para ocorrer um pitstop.
+ * @param Fim    [IN]  Nó final que demostra o término da corrida.
+ * @retval no*  O nó contruido.
+ */
 no *constroiArvore(int voltasSemPit, int voltaAtual, int numVoltas, int minVoltasPit, int maxVoltasPit, double variancaTempos[], double custoPit, no *Fim){
     if (voltaAtual > numVoltas){
         return Fim;
@@ -167,7 +204,7 @@ no *constroiArvore(int voltasSemPit, int voltaAtual, int numVoltas, int minVolta
         else {
             M->pitstop = false;
         }
-        if (voltasSemPit <= minVoltasPit){
+        if (voltasSemPit < minVoltasPit){
             M->links[0] = nullptr;
             M->custos[0] = INT16_MAX;
         }
@@ -175,7 +212,7 @@ no *constroiArvore(int voltasSemPit, int voltaAtual, int numVoltas, int minVolta
             M->links[0] = constroiArvore(0, voltaAtual + 1, numVoltas, minVoltasPit, maxVoltasPit, variancaTempos, custoPit, Fim);
             M->custos[0] = custoPit;
         }
-        if (voltasSemPit >= maxVoltasPit){
+        if (voltasSemPit > maxVoltasPit){
             M->links[1] = nullptr;
             M->custos[1] = INT16_MAX;
         }
@@ -188,7 +225,10 @@ no *constroiArvore(int voltasSemPit, int voltaAtual, int numVoltas, int minVolta
     }
 }
 
-// Faz a leitura do arquivo de entrada e o coloca em uma string com as linhas dividadas por \n
+/**
+ * Faz a leitura do arquivo de entrada e o coloca em uma string.
+ * @retval string  A string lida do arquivo.
+ */
 string lerTxt()
 {
     ifstream file("input.txt");
@@ -206,6 +246,16 @@ string lerTxt()
     return input;
 }
 
+/**
+ * Separa cada parte do input para sua váriavel própria.
+ * @param input    [IN]  String de entrada.
+ * @param numVoltas     [OUT]  Número total de voltas da corrida.
+ * @param minVoltasPit    [OUT]  O mínimo de voltas antes de um pistop poder ocorrer.
+ * @param maxVoltasPit    [OUT]  O máximo de voltas até de um pistop poder ocorrer.
+ * @param tempoBase    [OUT]  Tempo base para cada volta.
+ * @param variancaTempos    [OUT]  Um vetor contendo a perda de tempo por volta cada volta que está sem ocorrer um pitstop.
+ * @param custoPit    [OUT]  Custo de tempo para ocorrer um pitstop.
+ */
 void lerInput(string input, int *numVoltas, int *minVoltasPit, int *maxVoltasPit, double *tempoBase, double variancaTempos[], double *custoPit){
     regex termoRegex("voltas:\\s*(\\d+)\\s*min voltas antes do pitstop:\\s*(\\d+)\\s*max voltas antes do pitstop:\\s*(\\d+)\\s*tempo base:\\s*(\\d+[.]?\\d*)\\s*tempo de pitstop:\\s*(\\d+[.]?\\d*)");
     smatch match;
@@ -231,34 +281,24 @@ void lerInput(string input, int *numVoltas, int *minVoltasPit, int *maxVoltasPit
     
 }
 
-    int maximo(int a, int b)
-    {
-    return (a > b)? a : b;
-    }
- 
-    int altura_AVL(no *p)
-    {
-        if (p == NULL)
-            return 0;
-        return 1+maximo(altura_AVL(p->links[0]), altura_AVL(p->links[1]));
-    }
+/**
+ * Imprime o caminho passado.
+ * @param caminho     [IN]  Caminho para ser imprimido.
+ * @param t     [IN]  Tamanho do caminho.
+ */
+void imprimirResultado(no caminho[], int n){
+    for (int i = n - 1; i >= 0; i--){
+        string titulo = " NO ";
+        string pit = caminho[i].pitstop ? "Sim" : "Nao";
+        stringstream ss;
+        ss << fixed << setprecision(2);
 
-void mostraPorNivel(no *T, int nivel, int prox_nivel) {
-	if (T == NULL) return;
-		if (nivel == prox_nivel) {
-				cout << T->volta << " - ";
-	} else if (nivel < prox_nivel) {
-				mostraPorNivel(T->links[0],nivel + 1, prox_nivel);
-				mostraPorNivel(T->links[1],nivel + 1, prox_nivel);
-	}
-}
+        cout << "\e[36m-----------------\e[39m" << endl;
+        cout << " \e[31mVolta:\e[39m  " << setw(4) << caminho[i].volta << endl;
+        cout << " Pitstop: " << setw(3) << pit << endl;
+        cout << "\e[36m-----------------\e[39m" << endl;
 
-void largura_AVL(no *T) {
-	int altura = altura_AVL(T);
-	for (int i = 1; i <= altura+1; ++i) {
-		mostraPorNivel(T, 1, i);
-		cout << endl;
-	}
+    }
 }
 
 int main(){
@@ -268,8 +308,6 @@ int main(){
     double tempoBase, custoPit, variancaTempos[X];
     cout << input << endl;
     lerInput(input, &numVoltas, &minVoltasPit, &maxVoltasPit, &tempoBase, variancaTempos, &custoPit);
-    cout << numVoltas << "  " << minVoltasPit << "  " << maxVoltasPit << "  " << tempoBase << "  " << custoPit << endl;
-
     
     no *Fim = new no;
     Fim->volta = numVoltas + 1;
@@ -279,15 +317,18 @@ int main(){
     Fim->custos[0] = 0;
     Fim->custos[1] = 0;
     no *s;
-    s = constroiArvore(0, 1, numVoltas, minVoltasPit, maxVoltasPit, variancaTempos, custoPit, Fim);
-    largura_AVL(s);
-
-    cout << "Fim: " << &Fim << endl << endl;
+    s = constroiArvore(1, 1, numVoltas, minVoltasPit, maxVoltasPit, variancaTempos, custoPit, Fim);
 
     no *caminhoFinal;
     bool achou = false;
-    caminhoFinal = aStar(s, Fim, tempoBase, &achou);
-    cout << caminhoFinal[0].volta << endl;
+    caminhoFinal = aStar(s, Fim, tempoBase);
+    if (caminhoFinal != nullptr){
+        imprimirResultado(caminhoFinal, Fim->volta);
+    }
+    else {
+        cout << "Não foi possível encontrar um caminho" << endl;
+    }
+    
 
 
     return 0;

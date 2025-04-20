@@ -1,0 +1,6 @@
+voltas: 5
+min voltas antes do pitstop: 0
+max voltas antes do pitstop: 7
+tempo base: 1.00
+tempo de pitstop: 0.20
+tempo perdido por volta sem pit:  0.01 0.02 0.03 0.04 0.05

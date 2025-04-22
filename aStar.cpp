@@ -90,8 +90,8 @@ void remove(T *v, int n, T valor){
     while (v[i] != valor){
         i++;
     }
-    for(i; i < n - 1; i++){
-        v[i] = vetor[i + 1];
+    for(; i < n - 1; i++){
+        v[i] = v[i + 1];
     }
     v[i] = 0;
 }
@@ -253,10 +253,10 @@ string lerTxt()
  * @param minVoltasPit    [OUT]  O mínimo de voltas antes de um pistop poder ocorrer.
  * @param maxVoltasPit    [OUT]  O máximo de voltas até de um pistop poder ocorrer.
  * @param tempoBase    [OUT]  Tempo base para cada volta.
- * @param variancaTempos    [OUT]  Um vetor contendo a perda de tempo por volta cada volta que está sem ocorrer um pitstop.
  * @param custoPit    [OUT]  Custo de tempo para ocorrer um pitstop.
+ * @retval double*  Um vetor contendo a perda de tempo por cada volta que está sem ocorrer um pitstop.
  */
-void lerInput(string input, int *numVoltas, int *minVoltasPit, int *maxVoltasPit, double *tempoBase, double variancaTempos[], double *custoPit){
+double *lerInput(string input, int *numVoltas, int *minVoltasPit, int *maxVoltasPit, double *tempoBase, double *custoPit){
     regex termoRegex("voltas:\\s*(\\d+)\\s*min voltas antes do pitstop:\\s*(\\d+)\\s*max voltas antes do pitstop:\\s*(\\d+)\\s*tempo base:\\s*(\\d+[.]?\\d*)\\s*tempo de pitstop:\\s*(\\d+[.]?\\d*)");
     smatch match;
 
@@ -272,12 +272,19 @@ void lerInput(string input, int *numVoltas, int *minVoltasPit, int *maxVoltasPit
     regex varianca(".*tempo perdido por volta sem pit:");
     regex_search(it, input.cend(), match, varianca);
     regex tempos("(\\d+[.]?\\d*)");
-    int i = 0;
+    int i = 0, n = 0;
+    auto it2 = it;
+    while(regex_search(it2, input.cend(), match, tempos)){
+        n++;
+        it2 = match.suffix().first;
+    }
+    double variancaTempos[n];
     while(regex_search(it, input.cend(), match, tempos)){
         variancaTempos[i] = stod(match.str(1));
         it = match.suffix().first;
         i++;
     }
+    return variancaTempos;
     
 }
 
@@ -305,9 +312,8 @@ int main(){
     string input;
     input = lerTxt();
     int numVoltas, minVoltasPit, maxVoltasPit;
-    double tempoBase, custoPit, variancaTempos[X];
-    cout << input << endl;
-    lerInput(input, &numVoltas, &minVoltasPit, &maxVoltasPit, &tempoBase, variancaTempos, &custoPit);
+    double tempoBase, custoPit, *variancaTempos;
+    variancaTempos = lerInput(input, &numVoltas, &minVoltasPit, &maxVoltasPit, &tempoBase, &custoPit);
     
     no *Fim = new no;
     Fim->volta = numVoltas + 1;
@@ -320,7 +326,6 @@ int main(){
     s = constroiArvore(1, 1, numVoltas, minVoltasPit, maxVoltasPit, variancaTempos, custoPit, Fim);
 
     no *caminhoFinal;
-    bool achou = false;
     caminhoFinal = aStar(s, Fim, tempoBase);
     if (caminhoFinal != nullptr){
         imprimirResultado(caminhoFinal, Fim->volta);
@@ -328,8 +333,6 @@ int main(){
     else {
         cout << "Não foi possível encontrar um caminho" << endl;
     }
-    
-
 
     return 0;
 }

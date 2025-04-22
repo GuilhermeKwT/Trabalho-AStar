@@ -6,7 +6,6 @@
 #include <iomanip>
 
 #define N 2
-#define X 10
 #define TotalNos INT16_MAX
 
 using namespace std;

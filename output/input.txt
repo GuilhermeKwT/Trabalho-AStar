@@ -1,5 +1,5 @@
-voltas: 8
-min voltas antes do pitstop: 0
+voltas: 19
+min voltas antes do pitstop: 4
 max voltas antes do pitstop: 6
 tempo base: 1.00
 tempo de pitstop: 0.1

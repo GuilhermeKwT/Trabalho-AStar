@@ -277,7 +277,8 @@ double *lerInput(string input, int *numVoltas, int *minVoltasPit, int *maxVoltas
         n++;
         it2 = match.suffix().first;
     }
-    double variancaTempos[n];
+    double *variancaTempos;
+    variancaTempos = new double[n];
     while(regex_search(it, input.cend(), match, tempos)){
         variancaTempos[i] = stod(match.str(1));
         it = match.suffix().first;
